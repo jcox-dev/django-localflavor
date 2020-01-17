@@ -1,15 +1,13 @@
 """Kuwait-specific Form helpers."""
-from __future__ import unicode_literals
-
 import re
 import textwrap
 from datetime import date
 
-from django.core.validators import EMPTY_VALUES
 from django.forms import ValidationError
 from django.forms.fields import RegexField, Select
 from django.utils.translation import gettext_lazy as _
 
+from .kw_areas import AREA_CHOICES
 from .kw_governorates import GOVERNORATE_CHOICES
 
 
@@ -49,14 +47,15 @@ class KWCivilIDNumberField(RegexField):
     }
 
     def __init__(self, max_length=12, min_length=12, *args, **kwargs):
-        super(KWCivilIDNumberField, self).__init__(r'\d{12}',
-                                                   max_length,
-                                                   min_length, *args, **kwargs)
+        super().__init__(
+            r'\d{12}', max_length=max_length, min_length=min_length,
+            *args, **kwargs
+        )
 
     def clean(self, value):
-        super(KWCivilIDNumberField, self).clean(value)
-        if value in EMPTY_VALUES:
-            return ''
+        super().clean(value)
+        if value in self.empty_values:
+            return self.empty_value
 
         cc = value[0]  # Century value
         yy, mm, dd = textwrap.wrap(value[1:7], 2)  # Date parts
@@ -86,5 +85,16 @@ class KWGovernorateSelect(Select):
     """
 
     def __init__(self, attrs=None):
-        super(KWGovernorateSelect, self).__init__(attrs,
-                                                  choices=GOVERNORATE_CHOICES)
+        super().__init__(attrs, choices=GOVERNORATE_CHOICES)
+
+
+class KWAreaSelect(Select):
+    """
+    A Select widget that uses a list of Kuwait areas
+    as its choices.
+
+    .. versionadded:: 1.6
+    """
+
+    def __init__(self, attrs=None):
+        super().__init__(attrs, choices=AREA_CHOICES)

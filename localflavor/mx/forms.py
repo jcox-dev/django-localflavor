@@ -1,14 +1,9 @@
-# -*- coding: utf-8 -*-
 """Mexican-specific form helpers."""
-from __future__ import unicode_literals
-
 import re
 
-from django.core.validators import EMPTY_VALUES
 from django.forms import ValidationError
 from django.forms.fields import RegexField, Select
-from django.utils import six
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from .mx_states import STATE_CHOICES
 
@@ -49,7 +44,7 @@ class MXStateSelect(Select):
     """A Select widget that uses a list of Mexican states as its choices."""
 
     def __init__(self, attrs=None):
-        super(MXStateSelect, self).__init__(attrs, choices=STATE_CHOICES)
+        super().__init__(attrs, choices=STATE_CHOICES)
 
 
 class MXZipCodeField(RegexField):
@@ -66,7 +61,7 @@ class MXZipCodeField(RegexField):
 
     def __init__(self, *args, **kwargs):
         zip_code_re = r'^(0[1-9]|[1][0-6]|[2-9]\d)(\d{3})$'
-        super(MXZipCodeField, self).__init__(zip_code_re, *args, **kwargs)
+        super().__init__(zip_code_re, *args, **kwargs)
 
 
 class MXRFCField(RegexField):
@@ -112,13 +107,12 @@ class MXRFCField(RegexField):
     def __init__(self, min_length=12, max_length=13, *args, **kwargs):
         rfc_re = re.compile(r'^([A-Z&Ññ]{3}|[A-Z][AEIOU][A-Z]{2})%s[A-Z0-9]{2}[0-9A]$' % DATE_RE,
                             re.IGNORECASE)
-        super(MXRFCField, self).__init__(rfc_re, min_length=min_length,
-                                         max_length=max_length, *args, **kwargs)
+        super().__init__(rfc_re, min_length=min_length, max_length=max_length, *args, **kwargs)
 
     def clean(self, value):
-        value = super(MXRFCField, self).clean(value)
-        if value in EMPTY_VALUES:
-            return ''
+        value = super().clean(value)
+        if value in self.empty_values:
+            return self.empty_value
         value = value.upper()
         if self._has_homoclave(value):
             if not value[-1] == self._checksum(value[:-1]):
@@ -158,7 +152,7 @@ class MXRFCField(RegexField):
         elif checksum == 11:
             return '0'
 
-        return six.text_type(checksum)
+        return str(checksum)
 
     def _has_inconvenient_word(self, rfc):
         first_four = rfc[:4]
@@ -185,7 +179,7 @@ class MXCLABEField(RegexField):
 
     def __init__(self, min_length=18, max_length=18, *args, **kwargs):
         clabe_re = r'^\d{18}$'
-        super(MXCLABEField, self).__init__(clabe_re, min_length, max_length, *args, **kwargs)
+        super().__init__(clabe_re, min_length=min_length, max_length=max_length, *args, **kwargs)
 
     def _checksum(self, value):
         verification_digit = int(value[-1])
@@ -198,9 +192,9 @@ class MXCLABEField(RegexField):
         return verification_digit == (10 - sum_remainder) % 10
 
     def clean(self, value):
-        value = super(MXCLABEField, self).clean(value)
-        if value in EMPTY_VALUES:
-            return ''
+        value = super().clean(value)
+        if value in self.empty_values:
+            return self.empty_value
         if not value.isdigit():
             raise ValidationError(self.error_messages['invalid'])
         if not self._checksum(value):
@@ -246,13 +240,12 @@ class MXCURPField(RegexField):
         curp_re = (r'^[A-Z][AEIOU][A-Z]{2}%s[HM]%s%s{3}[0-9A-Z]\d$' %
                    (DATE_RE, states_re, consonants_re))
         curp_re = re.compile(curp_re, re.IGNORECASE)
-        super(MXCURPField, self).__init__(curp_re, min_length=min_length,
-                                          max_length=max_length, *args, **kwargs)
+        super().__init__(curp_re, min_length=min_length, max_length=max_length, *args, **kwargs)
 
     def clean(self, value):
-        value = super(MXCURPField, self).clean(value)
-        if value in EMPTY_VALUES:
-            return ''
+        value = super().clean(value)
+        if value in self.empty_values:
+            return self.empty_value
         value = value.upper()
         if value[-1] != self._checksum(value[:-1]):
             raise ValidationError(self.error_messages['invalid_checksum'])
@@ -268,7 +261,7 @@ class MXCURPField(RegexField):
 
         if checksum == 10:
             return '0'
-        return six.text_type(checksum)
+        return str(checksum)
 
     def _has_inconvenient_word(self, curp):
         first_four = curp[:4]
@@ -305,15 +298,12 @@ class MXSocialSecurityNumberField(RegexField):
     def __init__(self, min_length=11, max_length=11, *args, **kwargs):
         ssn_re = r'^\d{11}$'
         ssn_re = re.compile(ssn_re)
-        super(MXSocialSecurityNumberField, self).__init__(ssn_re,
-                                                          min_length=min_length,
-                                                          max_length=max_length,
-                                                          *args, **kwargs)
+        super().__init__(ssn_re, min_length=min_length, max_length=max_length, *args, **kwargs)
 
     def clean(self, value):
-        value = super(MXSocialSecurityNumberField, self).clean(value)
-        if value in EMPTY_VALUES:
-            return ''
+        value = super().clean(value)
+        if value in self.empty_values:
+            return self.empty_value
         if value[-1] != self.__checksum(value[:-1]):
             raise ValidationError(self.error_messages['invalid_checksum'])
         return value
@@ -327,4 +317,4 @@ class MXSocialSecurityNumberField(RegexField):
 
         if checksum == 10:
             return '0'
-        return six.text_type(checksum)
+        return str(checksum)

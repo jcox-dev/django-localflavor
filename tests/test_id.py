@@ -1,9 +1,7 @@
-from __future__ import unicode_literals
-
 from django.test import SimpleTestCase
 
 from localflavor.id_.forms import (IDLicensePlateField, IDLicensePlatePrefixSelect, IDNationalIdentityNumberField,
-                                   IDPhoneNumberField, IDPostCodeField, IDProvinceSelect)
+                                   IDPostCodeField, IDProvinceSelect)
 
 
 class IDLocalFlavorTests(SimpleTestCase):
@@ -25,6 +23,7 @@ class IDLocalFlavorTests(SimpleTestCase):
 <option value="KSL">Kalimantan Selatan</option>
 <option value="KTG">Kalimantan Tengah</option>
 <option value="KTM">Kalimantan Timur</option>
+<option value="KTR">Kalimantan Utara</option>
 <option value="BBL">Kepulauan Bangka-Belitung</option>
 <option value="KRI">Kepulauan Riau</option>
 <option value="LPG" selected="selected">Lampung</option>
@@ -107,25 +106,6 @@ class IDLocalFlavorTests(SimpleTestCase):
 <option value="Z">Garut</option>
 </select>'''
         self.assertHTMLEqual(f.render('codes', 'BE'), out)
-
-    def test_IDPhoneNumberField(self):
-        error_invalid = ['Enter a valid phone number']
-        valid = {
-            '0812-3456789': '0812-3456789',
-            '081234567890': '081234567890',
-            '021 345 6789': '021 345 6789',
-            '0213456789': '0213456789',
-            '+62-21-3456789': '+62-21-3456789',
-            '(021) 345 6789': '(021) 345 6789',
-        }
-        invalid = {
-            '0123456789': error_invalid,
-            '+62-021-3456789': error_invalid,
-            '+62-0812-3456789': error_invalid,
-            '0812345678901': error_invalid,
-            'foo': error_invalid,
-        }
-        self.assertFieldOutput(IDPhoneNumberField, valid, invalid)
 
     def test_IDPostCodeField(self):
         error_invalid = ['Enter a valid post code']

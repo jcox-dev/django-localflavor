@@ -1,18 +1,11 @@
-# -*- coding: utf-8 -*-
 """FR-specific Form helpers"""
-from __future__ import unicode_literals
-
 import re
 from datetime import date
 
-from django.core.validators import EMPTY_VALUES
 from django.forms import ValidationError
 from django.forms.fields import CharField, RegexField, Select
-from django.utils.encoding import force_text
-from django.utils.translation import ugettext_lazy as _
-
-from localflavor.generic.checksums import luhn
-from localflavor.generic.forms import DeprecatedPhoneNumberFormFieldMixin
+from django.utils.translation import gettext_lazy as _
+from stdnum import luhn
 
 from .fr_department import DEPARTMENT_CHOICES_PER_REGION
 from .fr_region import REGION_2016_CHOICES, REGION_CHOICES
@@ -38,45 +31,7 @@ class FRZipCodeField(RegexField):
         kwargs.setdefault('label', _('Zip code'))
         kwargs['max_length'] = 5
         kwargs['min_length'] = 5
-        super(FRZipCodeField, self).__init__(r'^\d{5}$', *args, **kwargs)
-
-
-class FRPhoneNumberField(CharField, DeprecatedPhoneNumberFormFieldMixin):
-    """
-    Validate local French phone number (not international ones).
-
-    The correct format is '0X XX XX XX XX'.
-    '0X.XX.XX.XX.XX' and '0XXXXXXXXX' validate but are corrected to
-    '0X XX XX XX XX'.
-    """
-
-    phone_digits_re = re.compile(r'^0\d(\s|\.)?(\d{2}(\s|\.)?){3}\d{2}$')
-
-    default_error_messages = {
-        'invalid': _('Phone numbers must be in 0X XX XX XX XX format.'),
-    }
-
-    def __init__(self, *args, **kwargs):
-        kwargs.setdefault('label', _('Phone number'))
-        kwargs['max_length'] = 14
-        kwargs['min_length'] = 10
-        super(FRPhoneNumberField, self).__init__(*args, **kwargs)
-
-    def clean(self, value):
-        value = super(FRPhoneNumberField, self).clean(value)
-        if value in EMPTY_VALUES:
-            return ''
-        value = re.sub('(\.|\s)', '', force_text(value))
-        m = self.phone_digits_re.search(value)
-        if m:
-            return '%s %s %s %s %s' % (
-                value[0:2],
-                value[2:4],
-                value[4:6],
-                value[6:8],
-                value[8:10]
-            )
-        raise ValidationError(self.error_messages['invalid'])
+        super().__init__(r'^\d{5}$', *args, **kwargs)
 
 
 class FRDepartmentSelect(Select):
@@ -87,10 +42,7 @@ class FRDepartmentSelect(Select):
             (dep[0], '%s - %s' % (dep[0], dep[1]))
             for dep in DEPARTMENT_CHOICES_PER_REGION
         ]
-        super(FRDepartmentSelect, self).__init__(
-            attrs,
-            choices=choices
-        )
+        super().__init__(attrs, choices=choices)
 
 
 class FRRegionSelect(Select):
@@ -101,10 +53,7 @@ class FRRegionSelect(Select):
             (dep[0], '%s - %s' % (dep[0], dep[1]))
             for dep in REGION_CHOICES
         ]
-        super(FRRegionSelect, self).__init__(
-            attrs,
-            choices=choices
-        )
+        super().__init__(attrs, choices=choices)
 
 
 class FRRegion2016Select(Select):
@@ -116,7 +65,7 @@ class FRRegion2016Select(Select):
             (reg[0], '%s - %s' % (reg[0], reg[1]))
             for reg in REGION_2016_CHOICES
         ]
-        super(FRRegion2016Select, self).__init__(attrs, choices=choices)
+        super().__init__(attrs, choices=choices)
 
 
 class FRDepartmentField(CharField):
@@ -126,7 +75,7 @@ class FRDepartmentField(CharField):
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('label', _('Select Department'))
-        super(FRDepartmentField, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 class FRRegionField(CharField):
@@ -136,7 +85,7 @@ class FRRegionField(CharField):
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('label', _('Select Region'))
-        super(FRRegionField, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 class FRNationalIdentificationNumber(CharField):
@@ -153,9 +102,9 @@ class FRNationalIdentificationNumber(CharField):
     }
 
     def clean(self, value):
-        super(FRNationalIdentificationNumber, self).clean(value)
-        if value in EMPTY_VALUES:
-            return ''
+        super().clean(value)
+        if value in self.empty_values:
+            return self.empty_value
 
         value = value.replace(' ', '').replace('-', '')
 
@@ -220,16 +169,16 @@ class FRNationalIdentificationNumber(CharField):
         return commune_of_origin, department_of_origin
 
 
-class FRSIRENENumberMixin(object):
+class FRSIRENENumberMixin:
     """Abstract class for SIREN and SIRET numbers, from the SIRENE register."""
 
     def clean(self, value):
-        super(FRSIRENENumberMixin, self).clean(value)
-        if value in EMPTY_VALUES:
-            return ''
+        super().clean(value)
+        if value in self.empty_values:
+            return self.empty_value
 
         value = value.replace(' ', '').replace('-', '')
-        if not self.r_valid.match(value) or not luhn(value):
+        if not self.r_valid.match(value) or not luhn.is_valid(value):
             raise ValidationError(self.error_messages['invalid'])
         return value
 
@@ -274,14 +223,15 @@ class FRSIRETField(FRSIRENENumberMixin, CharField):
     }
 
     def clean(self, value):
-        if value not in EMPTY_VALUES:
-            value = value.replace(' ', '').replace('-', '')
+        value = super().clean(value)
+        if value in self.empty_values:
+            return self.empty_value
 
-        ret = super(FRSIRETField, self).clean(value)
+        value = value.replace(' ', '').replace('-', '')
 
-        if not luhn(ret[:9]):
+        if not luhn.is_valid(value[:9]):
             raise ValidationError(self.error_messages['invalid'])
-        return ret
+        return value
 
     def prepare_value(self, value):
         if value is None:

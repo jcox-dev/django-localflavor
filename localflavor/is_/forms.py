@@ -1,15 +1,10 @@
 """Iceland specific form helpers."""
 
-from __future__ import unicode_literals
-
-from django.core.validators import EMPTY_VALUES
 from django.forms import ValidationError
 from django.forms.fields import RegexField
 from django.forms.widgets import Select
 from django.utils.encoding import force_text
-from django.utils.translation import ugettext_lazy as _
-
-from localflavor.generic.forms import DeprecatedPhoneNumberFormFieldMixin
+from django.utils.translation import gettext_lazy as _
 
 from .is_postalcodes import IS_POSTALCODES
 
@@ -27,14 +22,16 @@ class ISIdNumberField(RegexField):
     }
 
     def __init__(self, max_length=11, min_length=10, *args, **kwargs):
-        super(ISIdNumberField, self).__init__(r'^\d{6}(-| )?\d{4}$',
-                                              max_length, min_length, *args, **kwargs)
+        super().__init__(
+            r'^\d{6}(-| )?\d{4}$', max_length=max_length, min_length=min_length,
+            *args, **kwargs
+        )
 
     def clean(self, value):
-        value = super(ISIdNumberField, self).clean(value)
+        value = super().clean(value)
 
-        if value in EMPTY_VALUES:
-            return ''
+        if value in self.empty_values:
+            return self.empty_value
 
         value = self._canonify(value)
         if self._validate(value):
@@ -60,28 +57,8 @@ class ISIdNumberField(RegexField):
         return force_text(value[:6] + '-' + value[6:])
 
 
-class ISPhoneNumberField(RegexField, DeprecatedPhoneNumberFormFieldMixin):
-    """
-    Icelandic phone number.
-
-    Seven digits with an optional hyphen or space after the first three digits.
-    """
-
-    def __init__(self, max_length=8, min_length=7, *args, **kwargs):
-        super(ISPhoneNumberField, self).__init__(r'^\d{3}(-| )?\d{4}$',
-                                                 max_length, min_length, *args, **kwargs)
-
-    def clean(self, value):
-        value = super(ISPhoneNumberField, self).clean(value)
-
-        if value in EMPTY_VALUES:
-            return ''
-
-        return value.replace('-', '').replace(' ', '')
-
-
 class ISPostalCodeSelect(Select):
     """A Select widget that uses a list of Icelandic postal codes as its choices."""
 
     def __init__(self, attrs=None):
-        super(ISPostalCodeSelect, self).__init__(attrs, choices=IS_POSTALCODES)
+        super().__init__(attrs, choices=IS_POSTALCODES)
